@@ -1,7 +1,6 @@
 package boxup.ls.diagnostic;
 
 import boxup.cli.Context;
-import boxup.ls.document.NodeStream;
 
 class DiagnosticStream extends AbstractStream<Chunk<Context>, Chunk<Context>> {
   final reporter:Reporter;
@@ -15,17 +14,19 @@ class DiagnosticStream extends AbstractStream<Chunk<Context>, Chunk<Context>> {
 
   public function write(chunk:Chunk<Context>) {
     chunk.result.handleValue(context -> {
-      var nodes = new NodeStream();
-      
-      nodes
+      var scanner = new ScannerStream();
+
+      scanner
+        .map(new ParserStream())
         .map(new ValidatorStream(context.definitions))
         .map(new ReporterStream(reporter))
         .pipe(new WriteStream(_ -> forward(chunk)));
 
-      reader.pipe(nodes);
+      onClose.add(_ -> scanner.end());
+      reader.pipe(scanner);
     });
     chunk.result.handleError(error -> {
-      reporter.report(error, Source.none());
+      reporter.report(error, chunk.source);
       forward(chunk);
     });
   }

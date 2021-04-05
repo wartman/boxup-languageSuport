@@ -7,9 +7,19 @@
   },
   "main": "dist/extension.js",
   "activationEvents": [
-    "onLanguage:box"
+    "onLanguage:box",
+    "onCommand:box.compile"
   ],
   "contributes": {
-    "commands": []
+    "commands": [
+      {
+        "title": "Compile using .boxconfig",
+        "category": "Boxup",
+        "command": "box.compile"
+      }
+    ]
+  },
+  "dependencies": {
+    "pdfkit": "^0.12.0"
   }
 }

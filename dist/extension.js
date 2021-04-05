@@ -4,9 +4,11 @@ var $estr = function() { return js_Boot.__string_rec(this,''); },$hxEnums = $hxE
 function BoxupLanguage_activate(context) {
 	let reporter = new boxup_ls_diagnostic_DiagnosticReporter();
 	let reader = new boxup_ls_loader_TextDocumentLoader();
-	let worklet = new boxup_ls_Worklet(reporter,reader);
+	let controller = new boxup_ls_command_Controller();
+	let worklet = new boxup_ls_Worklet(reporter,controller,reader);
 	reporter.register(context);
 	reader.register(context);
+	controller.register(context);
 	worklet.register(context);
 }
 $hx_exports["activate"] = BoxupLanguage_activate;
@@ -1293,6 +1295,12 @@ class boxup_ValidatorStream extends boxup_AbstractStream {
 boxup_ValidatorStream.__name__ = true;
 class boxup_WriteStream {
 	constructor(handler,finisher) {
+		if(boxup_WriteStream._hx_skip_constructor) {
+			return;
+		}
+		this._hx_constructor(handler,finisher);
+	}
+	_hx_constructor(handler,finisher) {
 		this.closed = false;
 		this.onEnd = [];
 		this.handler = handler;
@@ -2054,6 +2062,148 @@ class haxe_ds_StringMap {
 	}
 }
 haxe_ds_StringMap.__name__ = true;
+class boxup_cli_GeneratorFactory {
+	constructor(manager,factory) {
+		this.generators = new haxe_ds_StringMap();
+		this.manager = manager;
+		this.factory = factory;
+	}
+	generate(nodes,source) {
+		let _g = this.getGenerator(nodes,source);
+		switch(_g._hx_index) {
+		case 0:
+			return _g.v.generate(nodes,source);
+		case 1:
+			return boxup_Result.Fail([new boxup_Error("Could not find a definition for " + source.filename,nodes[0].pos)]);
+		}
+	}
+	getGenerator(nodes,source) {
+		let _g = boxup_cli_DefinitionIdResolverCollection.resolveDefinitionId(this.manager.resolver,nodes,source);
+		if(_g._hx_index == 0) {
+			let _g1 = _g.v;
+			if(!Object.prototype.hasOwnProperty.call(this.generators.h,_g1)) {
+				let _g = this.manager.getDefinition(_g1);
+				if(_g._hx_index == 0) {
+					let this1 = this.generators;
+					let value = this.factory(_g.v);
+					this1.h[_g1] = value;
+				}
+			}
+			let generator = this.generators.h[_g1];
+			if(generator != null) {
+				return haxe_ds_Option.Some(generator);
+			} else {
+				return haxe_ds_Option.None;
+			}
+		} else {
+			return haxe_ds_Option.None;
+		}
+	}
+}
+boxup_cli_GeneratorFactory.__name__ = true;
+class boxup_cli_Task {
+	constructor(context,source,destination,generator,filter,extension) {
+		this.context = context;
+		this.source = source;
+		this.destination = destination;
+		this.generator = generator;
+		this.filter = filter;
+		this.extension = extension;
+	}
+}
+boxup_cli_Task.__name__ = true;
+class boxup_cli_TaskRunnerStream extends boxup_AbstractStream {
+	constructor() {
+		super();
+	}
+	write(chunk) {
+		let _gthis = this;
+		let result = chunk.result;
+		switch(result._hx_index) {
+		case 0:
+			let task = result.data;
+			let loader = new boxup_cli_loader_DirectoryLoader(task.source);
+			let scanner = new boxup_ScannerStream();
+			scanner.map(new boxup_cli_nodes_FilteredNodeStream(task.context.definitions,task.filter)).map(new boxup_ValidatorStream(task.context.definitions)).map(new boxup_GeneratorStream(task.generator)).pipe(new boxup_WriteStream(function(chunk) {
+				let result = chunk.result;
+				let data;
+				switch(result._hx_index) {
+				case 0:
+					data = boxup_Result.Ok({ task : task, content : result.data});
+					break;
+				case 1:
+					data = boxup_Result.Fail(result.error);
+					break;
+				}
+				let data1 = { result : data, source : chunk.source};
+				let this1 = _gthis.onData;
+				let _g = 0;
+				while(_g < this1.length) this1[_g++](data1);
+			}));
+			loader.pipe(scanner);
+			loader.load();
+			break;
+		case 1:
+			break;
+		}
+		let result1 = chunk.result;
+		switch(result1._hx_index) {
+		case 0:
+			break;
+		case 1:
+			let data = { result : boxup_Result.Fail(result1.error), source : chunk.source};
+			let this1 = _gthis.onData;
+			let _g = 0;
+			while(_g < this1.length) this1[_g++](data);
+			break;
+		}
+	}
+}
+boxup_cli_TaskRunnerStream.__name__ = true;
+class boxup_cli_TaskStream extends boxup_AbstractStream {
+	constructor(generators) {
+		boxup_ReadStream._hx_skip_constructor = true;
+		super();
+		boxup_ReadStream._hx_skip_constructor = false;
+		this._hx_constructor(generators);
+	}
+	_hx_constructor(generators) {
+		this.generators = generators;
+		super._hx_constructor();
+	}
+	write(chunk) {
+		let result = chunk.result;
+		switch(result._hx_index) {
+		case 0:
+			let _g = result.data;
+			let _g1 = 0;
+			let _g2 = _g.config.tasks;
+			while(_g1 < _g2.length) {
+				let task = _g2[_g1];
+				++_g1;
+				let this1 = this.onData;
+				let data = { result : boxup_Result.Ok(new boxup_cli_Task(_g,task.source,task.destination,new boxup_cli_GeneratorFactory(_g.definitions,this.generators.h[task.generator]),task.filter,task.extension)), source : chunk.source};
+				let _g3 = 0;
+				while(_g3 < this1.length) this1[_g3++](data);
+			}
+			break;
+		case 1:
+			break;
+		}
+		let result1 = chunk.result;
+		switch(result1._hx_index) {
+		case 0:
+			break;
+		case 1:
+			let data = { result : boxup_Result.Fail(result1.error), source : chunk.source};
+			let this1 = this.onData;
+			let _g3 = 0;
+			while(_g3 < this1.length) this1[_g3++](data);
+			break;
+		}
+	}
+}
+boxup_cli_TaskStream.__name__ = true;
 class boxup_cli_generator_HtmlGenerator {
 	constructor(definition) {
 		this.indent = 0;
@@ -2476,6 +2626,74 @@ class boxup_cli_loader_DirectoryLoader extends boxup_ReadStream {
 	}
 }
 boxup_cli_loader_DirectoryLoader.__name__ = true;
+class boxup_cli_nodes_FilteredNodeStream extends boxup_AbstractStream {
+	constructor(manager,allowedIds) {
+		boxup_ReadStream._hx_skip_constructor = true;
+		super();
+		boxup_ReadStream._hx_skip_constructor = false;
+		this._hx_constructor(manager,allowedIds);
+	}
+	_hx_constructor(manager,allowedIds) {
+		this.manager = manager;
+		this.allowedIds = allowedIds;
+		super._hx_constructor();
+	}
+	write(chunk) {
+		let result = chunk.result;
+		let result1;
+		switch(result._hx_index) {
+		case 0:
+			result1 = new boxup_Parser(result.data).parse();
+			break;
+		case 1:
+			result1 = boxup_Result.Fail(result.error);
+			break;
+		}
+		switch(result1._hx_index) {
+		case 0:
+			let _g = result1.data;
+			let _g1 = boxup_cli_DefinitionIdResolverCollection.resolveDefinitionId(this.manager.resolver,_g,chunk.source);
+			switch(_g1._hx_index) {
+			case 0:
+				if(!(!this.allowedIds.includes(_g1.v) && !this.allowedIds.includes("*"))) {
+					let data = { result : boxup_Result.Ok(_g), source : chunk.source};
+					let this1 = this.onData;
+					let _g1 = 0;
+					while(_g1 < this1.length) this1[_g1++](data);
+				}
+				break;
+			case 1:
+				if(this.allowedIds.includes("*")) {
+					let data = { result : boxup_Result.Ok(_g), source : chunk.source};
+					let this1 = this.onData;
+					let _g1 = 0;
+					while(_g1 < this1.length) this1[_g1++](data);
+				}
+				break;
+			default:
+				let data = { result : boxup_Result.Ok(_g), source : chunk.source};
+				let this1 = this.onData;
+				let _g2 = 0;
+				while(_g2 < this1.length) this1[_g2++](data);
+			}
+			break;
+		case 1:
+			break;
+		}
+		let result2 = result1;
+		switch(result2._hx_index) {
+		case 0:
+			break;
+		case 1:
+			let data1 = { result : boxup_Result.Fail(result2.error), source : chunk.source};
+			let this2 = this.onData;
+			let _g3 = 0;
+			while(_g3 < this2.length) this2[_g3++](data1);
+			break;
+		}
+	}
+}
+boxup_cli_nodes_FilteredNodeStream.__name__ = true;
 class boxup_cli_resolver_FileNameResolver {
 	constructor() {
 	}
@@ -2493,8 +2711,53 @@ class boxup_cli_resolver_FileNameResolver {
 	}
 }
 boxup_cli_resolver_FileNameResolver.__name__ = true;
+class boxup_cli_writer_FileWriter extends boxup_WriteStream {
+	constructor() {
+		boxup_WriteStream._hx_skip_constructor = true;
+		super();
+		boxup_WriteStream._hx_skip_constructor = false;
+		this._hx_constructor();
+	}
+	_hx_constructor() {
+		let _gthis = this;
+		super._hx_constructor(function(chunk) {
+			_gthis.handleChunk(chunk.result,chunk.source);
+		});
+	}
+	handleChunk(content,source) {
+		switch(content._hx_index) {
+		case 0:
+			let _g = content.data;
+			let fullPath = haxe_io_Path.join([_g.task.destination,this.getDestName(source.filename,_g.task.extension)]);
+			let dir = haxe_io_Path.directory(fullPath);
+			if(!sys_FileSystem.exists(dir)) {
+				sys_FileSystem.createDirectory(dir);
+			}
+			if(!sys_FileSystem.isDirectory(dir)) {
+				throw haxe_Exception.thrown("Not a directiory: " + dir);
+			}
+			js_node_Fs.writeFileSync(fullPath,_g.content);
+			break;
+		case 1:
+			break;
+		}
+	}
+	getDestName(filename,extension) {
+		let _g = haxe_io_Path.withoutDirectory(filename).split(".");
+		if(_g.length == 3) {
+			if(_g[2] == "box") {
+				return haxe_io_Path.withExtension(_g[0],extension);
+			} else {
+				return haxe_io_Path.withExtension(filename,extension);
+			}
+		} else {
+			return haxe_io_Path.withExtension(filename,extension);
+		}
+	}
+}
+boxup_cli_writer_FileWriter.__name__ = true;
 class boxup_ls_Worklet {
-	constructor(reporter,reader) {
+	constructor(reporter,controller,reader) {
 		let _g = new haxe_ds_StringMap();
 		_g.h["html"] = function(definition) {
 			return new boxup_cli_generator_HtmlGenerator(definition);
@@ -2504,6 +2767,7 @@ class boxup_ls_Worklet {
 		};
 		this.generators = _g;
 		this.reporter = reporter;
+		this.controller = controller;
 		this.reader = reader;
 	}
 	register(context) {
@@ -2512,7 +2776,7 @@ class boxup_ls_Worklet {
 		Vscode.workspace.onDidChangeTextDocument(function(change) {
 			if(boxup_ls_core_Util.isBoxConfig(change.document) || boxup_ls_core_Util.isDefinitionDocument(change.document)) {
 				reset();
-				_gthis.run();
+				reset = _gthis.run();
 			}
 		});
 	}
@@ -2524,16 +2788,73 @@ class boxup_ls_Worklet {
 		let key_current = 0;
 		while(key_current < key_length) _g.push(key_keys[key_current++]);
 		let config = new boxup_cli_ConfigStream(_g);
-		config.map(new boxup_cli_ContextStream([new boxup_cli_resolver_FileNameResolver()])).map(new boxup_ls_diagnostic_DiagnosticStream(this.reporter,this.reader));
+		config.map(new boxup_cli_ContextStream([new boxup_cli_resolver_FileNameResolver()])).map(new boxup_ls_command_CommandStream(this.controller,this.generators,this.reporter)).pipe(new boxup_ls_diagnostic_DiagnosticStream(this.reporter,this.reader));
 		configLoader.pipe(config);
 		configLoader.load();
 		return $bind(configLoader,configLoader.close);
 	}
 }
 boxup_ls_Worklet.__name__ = true;
+class boxup_ls_command_CommandStream extends boxup_AbstractStream {
+	constructor(controller,generators,reporter) {
+		boxup_ReadStream._hx_skip_constructor = true;
+		super();
+		boxup_ReadStream._hx_skip_constructor = false;
+		this._hx_constructor(controller,generators,reporter);
+	}
+	_hx_constructor(controller,generators,reporter) {
+		this.controller = controller;
+		this.generators = generators;
+		this.reporter = reporter;
+		super._hx_constructor();
+	}
+	write(chunk) {
+		let _gthis = this;
+		let this1 = this.controller.onCompile;
+		let listener = function(_) {
+			_gthis.compile(chunk);
+		};
+		this1.push(listener);
+		let cancel = function() {
+			HxOverrides.remove(this1,listener);
+		};
+		let listener1 = function(_) {
+			cancel();
+		};
+		this.onClose.push(listener1);
+		let this2 = this.onData;
+		let _g = 0;
+		while(_g < this2.length) this2[_g++](chunk);
+	}
+	compile(chunk) {
+		if(!this.isWritable()) {
+			return;
+		}
+		let tasks = new boxup_cli_TaskStream(this.generators);
+		let writer = new boxup_cli_writer_FileWriter();
+		tasks.map(new boxup_cli_TaskRunnerStream()).map(new boxup_ReporterStream(this.reporter)).pipe(writer);
+		tasks.write(chunk);
+		tasks.end();
+	}
+}
+boxup_ls_command_CommandStream.__name__ = true;
+class boxup_ls_command_Controller {
+	constructor() {
+		this.onCompile = [];
+	}
+	register(context) {
+		let _gthis = this;
+		context.subscriptions.push(Vscode.commands.registerCommand("box.compile",function() {
+			let this1 = _gthis.onCompile;
+			let _g = 0;
+			while(_g < this1.length) this1[_g++](_gthis);
+		}));
+	}
+}
+boxup_ls_command_Controller.__name__ = true;
 class boxup_ls_core_Util {
 	static isBoxConfig(document) {
-		return document.fileName == ".boxconfig";
+		return haxe_io_Path.withoutDirectory(document.fileName) == ".boxconfig";
 	}
 	static getEditorByUri(uri) {
 		return Lambda.find(Vscode.window.visibleTextEditors,function(editor) {
@@ -2549,7 +2870,7 @@ class boxup_ls_core_Util {
 		}
 		let _g = haxe_io_Path.withoutDirectory(document.fileName).split(".");
 		if(_g.length == 3) {
-			if(_g[1] == "definition") {
+			if(_g[1] == "d") {
 				if(_g[2] == "box") {
 					return true;
 				} else {
@@ -2596,11 +2917,12 @@ class boxup_ls_diagnostic_DiagnosticReporter {
 		while(_g < _g1.length) {
 			let error = _g1[_g];
 			++_g;
+			console.log("src/boxup/ls/diagnostic/DiagnosticReporter.hx:47:",error.toString());
 			if(error.pos.file.startsWith("<")) {
 				Vscode.window.showErrorMessage(error.toString());
 				return;
 			}
-			let uri = vscode_Uri.parse(error.pos.file);
+			let uri = vscode_Uri.file(error.pos.file);
 			let path = uri.toString();
 			let editor = boxup_ls_core_Util.getEditorByUri(uri);
 			if(editor == null) {
@@ -2665,13 +2987,17 @@ class boxup_ls_diagnostic_DiagnosticStream extends boxup_AbstractStream {
 		let result = chunk.result;
 		switch(result._hx_index) {
 		case 0:
-			let nodes = new boxup_ls_document_NodeStream();
-			nodes.map(new boxup_ValidatorStream(result.data.definitions)).map(new boxup_ReporterStream(_gthis.reporter)).pipe(new boxup_WriteStream(function(_) {
+			let scanner = new boxup_ScannerStream();
+			scanner.map(new boxup_ParserStream()).map(new boxup_ValidatorStream(result.data.definitions)).map(new boxup_ReporterStream(_gthis.reporter)).pipe(new boxup_WriteStream(function(_) {
 				let this1 = _gthis.onData;
 				let _g = 0;
 				while(_g < this1.length) this1[_g++](chunk);
 			}));
-			_gthis.reader.pipe(nodes);
+			let listener = function(_) {
+				scanner.end();
+			};
+			_gthis.onClose.push(listener);
+			_gthis.reader.pipe(scanner);
 			break;
 		case 1:
 			break;
@@ -2681,7 +3007,7 @@ class boxup_ls_diagnostic_DiagnosticStream extends boxup_AbstractStream {
 		case 0:
 			break;
 		case 1:
-			_gthis.reporter.report(result1.error,boxup_Source.none());
+			_gthis.reporter.report(result1.error,chunk.source);
 			let this1 = _gthis.onData;
 			let _g = 0;
 			while(_g < this1.length) this1[_g++](chunk);
@@ -2690,17 +3016,6 @@ class boxup_ls_diagnostic_DiagnosticStream extends boxup_AbstractStream {
 	}
 }
 boxup_ls_diagnostic_DiagnosticStream.__name__ = true;
-class boxup_ls_document_NodeStream extends boxup_AbstractStream {
-	constructor() {
-		super();
-	}
-	write(result) {
-		let scanner = new boxup_ScannerStream();
-		scanner.map(new boxup_ParserStream()).pipe(new boxup_WriteStream($bind(this,this.forward)));
-		scanner.write(result);
-	}
-}
-boxup_ls_document_NodeStream.__name__ = true;
 class boxup_ls_loader_TextDocumentLoader extends boxup_ReadStream {
 	constructor() {
 		super();
@@ -2719,7 +3034,7 @@ class boxup_ls_loader_TextDocumentLoader extends boxup_ReadStream {
 		});
 	}
 	send(doc) {
-		let source = new boxup_Source(doc.uri.toString(),doc.getText());
+		let source = new boxup_Source(doc.uri.fsPath,doc.getText());
 		if(this.isReadable()) {
 			let this1 = this.onData;
 			let data = boxup_Result.Ok(source);
@@ -3747,6 +4062,11 @@ class haxe_io_Path {
 		}
 		return s.ext;
 	}
+	static withExtension(path,ext) {
+		let s = new haxe_io_Path(path);
+		s.ext = ext;
+		return s.toString();
+	}
 	static join(paths) {
 		let _g = [];
 		let _g1 = 0;
@@ -3954,12 +4274,42 @@ class js_Boot {
 }
 js_Boot.__name__ = true;
 var js_node_Fs = require("fs");
+var js_node_Path = require("path");
 class sys_FileSystem {
+	static exists(path) {
+		try {
+			js_node_Fs.accessSync(path);
+			return true;
+		} catch( _g ) {
+			return false;
+		}
+	}
 	static isDirectory(path) {
 		try {
 			return js_node_Fs.statSync(path).isDirectory();
 		} catch( _g ) {
 			return false;
+		}
+	}
+	static createDirectory(path) {
+		try {
+			js_node_Fs.mkdirSync(path);
+		} catch( _g ) {
+			let _g1 = haxe_Exception.caught(_g).unwrap();
+			if(_g1.code == "ENOENT") {
+				sys_FileSystem.createDirectory(js_node_Path.dirname(path));
+				js_node_Fs.mkdirSync(path);
+			} else {
+				let stat;
+				try {
+					stat = js_node_Fs.statSync(path);
+				} catch( _g ) {
+					throw _g1;
+				}
+				if(!stat.isDirectory()) {
+					throw _g1;
+				}
+			}
 		}
 	}
 }
@@ -3981,6 +4331,7 @@ if( String.fromCodePoint == null ) String.fromCodePoint = function(c) { return c
 }
 js_Boot.__toStr = ({ }).toString;
 boxup_ReadStream._hx_skip_constructor = false;
+boxup_WriteStream._hx_skip_constructor = false;
 boxup_cli_DefinitionGenerator.defaultParagraphChildren = [new boxup_cli_ChildDefinition("@italic",null,null,null),new boxup_cli_ChildDefinition("@bold",null,null,null),new boxup_cli_ChildDefinition("@raw",null,null,null)];
 boxup_cli_DefinitionGenerator.defaultBlocks = [new boxup_cli_BlockDefinition("@italic",null,"Tag",[],[]),new boxup_cli_BlockDefinition("@bold",null,"Tag",[],[]),new boxup_cli_BlockDefinition("@raw",null,"Tag",[],[])];
 var boxup_cli_DefinitionValidator_validator = new boxup_cli_Definition("d",[new boxup_cli_BlockDefinition("@root",null,null,[new boxup_cli_ChildDefinition("Definition",null,null,false),new boxup_cli_ChildDefinition("Root",null,true,false),new boxup_cli_ChildDefinition("Meta",null,null,null),new boxup_cli_ChildDefinition("Block",null,null,null)],[]),new boxup_cli_BlockDefinition("Definition",null,null,[],[new boxup_cli_PropertyDefinition("id",true,true,null,null)]),new boxup_cli_BlockDefinition("Root",null,null,[new boxup_cli_ChildDefinition("Child",null,null,null)],[]),new boxup_cli_BlockDefinition("Block",null,null,[new boxup_cli_ChildDefinition("Child",null,null,null),new boxup_cli_ChildDefinition("Property",null,null,null),new boxup_cli_ChildDefinition("IdProperty",null,null,false),new boxup_cli_ChildDefinition("EnumProperty",null,null,null),new boxup_cli_ChildDefinition("Meta",null,null,null)],[new boxup_cli_PropertyDefinition("kind",null,false,"String",["Tag","Normal","Paragraph"]),new boxup_cli_PropertyDefinition("name",true,true,"String",null)]),new boxup_cli_BlockDefinition("Property",null,null,[],[new boxup_cli_PropertyDefinition("name",true,true,"String",null),new boxup_cli_PropertyDefinition("type",null,false,"String",null),new boxup_cli_PropertyDefinition("required",null,false,"Bool",null),new boxup_cli_PropertyDefinition("type",null,false,"String",["String","Int","Float","Bool"])]),new boxup_cli_BlockDefinition("IdProperty",null,null,[],[new boxup_cli_PropertyDefinition("name",true,true,"String",null),new boxup_cli_PropertyDefinition("type",null,false,"String",null),new boxup_cli_PropertyDefinition("required",null,false,"Bool",null)]),new boxup_cli_BlockDefinition("EnumProperty",null,null,[new boxup_cli_ChildDefinition("Option",null,true,true)],[new boxup_cli_PropertyDefinition("name",true,true,"String",null),new boxup_cli_PropertyDefinition("type",null,false,"String",null),new boxup_cli_PropertyDefinition("required",null,false,"Bool",null)]),new boxup_cli_BlockDefinition("Option",null,null,[],[new boxup_cli_PropertyDefinition("value",null,true,"String",null)]),new boxup_cli_BlockDefinition("Child",null,null,[],[new boxup_cli_PropertyDefinition("name",true,true,"String",null),new boxup_cli_PropertyDefinition("required",null,false,"Bool",null),new boxup_cli_PropertyDefinition("multiple",null,false,"Bool",null),new boxup_cli_PropertyDefinition("symbol",null,null,"String",["!","@","#","%","$","&","^","-",":","<",">","?","+","*"])]),new boxup_cli_BlockDefinition("Meta",null,"PropertyBag",[],[new boxup_cli_PropertyDefinition("metaNamespace",true,null,null,null)])],new haxe_ds_StringMap());

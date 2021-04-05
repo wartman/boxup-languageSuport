@@ -23,7 +23,7 @@ class Util {
   }
 
   public static function isBoxConfig(document:TextDocument) {
-    return document.fileName == '.boxconfig';
+    return document.fileName.withoutDirectory() == '.boxconfig';
   }
 
   public static function getEditorByUri(uri:Uri):Null<TextEditor> {
@@ -38,14 +38,14 @@ class Util {
   public static function isDefinitionDocument(document:TextDocument) {
     if (!isBoxupDocument(document)) return false;
     return switch document.fileName.withoutDirectory().split('.') {
-      case [_, 'definition', 'box']: true;
+      case [_, 'd', 'box']: true;
       default: false;
     }
   }
 
   public static function getDefinitionName(document:TextDocument) {
     return switch document.fileName.withoutDirectory().split('.') {
-      case [name, 'definition', 'box']: name;
+      case [name, 'd', 'box']: name;
       default: null;
     }
   }

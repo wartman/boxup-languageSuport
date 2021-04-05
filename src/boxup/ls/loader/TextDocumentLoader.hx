@@ -26,7 +26,7 @@ class TextDocumentLoader
   }
 
   function send(doc:TextDocument) {
-    var source = new Source(doc.uri.toString(), doc.getText());
+    var source = new Source(doc.uri.fsPath, doc.getText());
     if (isReadable()) onData.emit(Ok(source));
   }
 }

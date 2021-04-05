@@ -44,12 +44,13 @@ class DiagnosticReporter implements Plugin implements Reporter {
     var diags:Map<String, Array<Diagnostic>> = [];
 
     for (error in errors) {
+      trace(error.toString());
       if (error.pos.file.startsWith('<')) {
         Vscode.window.showErrorMessage(error.toString());
         return;
       }
 
-      var uri = Uri.parse(error.pos.file);
+      var uri = Uri.file(error.pos.file);
       var path = uri.toString();
       var editor = uri.getEditorByUri();
       

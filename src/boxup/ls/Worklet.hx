@@ -1,5 +1,8 @@
 package boxup.ls;
 
+import boxup.ls.command.CommandStream;
+import boxup.ls.command.Controller;
+import boxup.cli.TaskStream;
 import boxup.cli.ContextStream;
 import vscode.ExtensionContext;
 import boxup.cli.ConfigStream;
@@ -15,6 +18,7 @@ using boxup.ls.core.Util;
 
 class Worklet implements Plugin {
   final reporter:Reporter;
+  final controller:Controller;
   final reader:Readable<Result<Source>>;
   final generators = [
     'html' => HtmlGenerator.new,
@@ -22,8 +26,9 @@ class Worklet implements Plugin {
     // 'pdf' => PdfGenerator.new
   ];
 
-  public function new(reporter, reader) {
+  public function new(reporter, controller, reader) {
     this.reporter = reporter;
+    this.controller = controller;
     this.reader = reader;
   }
 
@@ -32,7 +37,7 @@ class Worklet implements Plugin {
     Vscode.workspace.onDidChangeTextDocument(change -> {
       if (change.document.isBoxConfig() || change.document.isDefinitionDocument()) {
         reset();
-        run();
+        reset = run();
       }
     });
     // Vscode.workspace.onDidCreateFiles(files -> {
@@ -42,11 +47,13 @@ class Worklet implements Plugin {
   function run():()->Void {
     var configLoader = new WorkspaceBoxConfigLoader();
     var config = new ConfigStream([ for (key in generators.keys()) key ]);
+    var context = new ContextStream([ new FileNameResolver() ]);
     
     config
-      .map(new ContextStream([ new FileNameResolver() ]))
-      .map(new DiagnosticStream(reporter, reader));
-
+      .map(context)
+      .map(new CommandStream(controller, generators, reporter))
+      .pipe(new DiagnosticStream(reporter, reader));
+    
     configLoader.pipe(config);
     configLoader.load();
 

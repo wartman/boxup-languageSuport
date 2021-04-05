@@ -1,3 +1,4 @@
+import boxup.ls.command.Controller;
 import boxup.ls.Worklet;
 import vscode.ExtensionContext;
 import boxup.ls.diagnostic.DiagnosticReporter;
@@ -7,10 +8,12 @@ import boxup.ls.loader.TextDocumentLoader;
 function activate(context:ExtensionContext) {
   var reporter = new DiagnosticReporter();
   var reader = new TextDocumentLoader();
-  var worklet = new Worklet(reporter, reader);
+  var controller = new Controller();
+  var worklet = new Worklet(reporter, controller, reader);
 
   reporter.register(context);
   reader.register(context);
+  controller.register(context);
   worklet.register(context);
 }
 
