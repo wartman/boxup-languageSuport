@@ -1,0 +1,15 @@
+{
+  "name": "boxup-ls",
+  "publisher": "",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.4.0"
+  },
+  "main": "dist/extension.js",
+  "activationEvents": [
+    "onLanguage:box"
+  ],
+  "contributes": {
+    "commands": []
+  }
+}

@@ -1,0 +1,15 @@
+-cp src
+
+-lib boxup
+-lib hxnodejs
+-lib vscode
+-lib capsule
+
+-D js-es=6
+-D analyzer-optimize
+
+-dce full
+
+BoxupLanguage
+
+-js dist/extension.js
